@@ -96,7 +96,6 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # NUEVO: Puerto 443 requerido por la rúbrica
   ingress {
     from_port   = 443
     to_port     = 443
@@ -199,6 +198,14 @@ resource "aws_lb_target_group" "backend_tg" {
   }
 }
 
+# NUEVO: Target Group para HTTPS (Requisito de rúbrica)
+resource "aws_lb_target_group" "web_tg_https" {
+  name     = "technova-tg-https"
+  port     = 443
+  protocol = "HTTPS"
+  vpc_id   = aws_vpc.main.id
+}
+
 resource "aws_lb_listener" "web_listener" {
   load_balancer_arn = aws_lb.web_alb.arn
   port              = "80"
@@ -226,6 +233,16 @@ resource "aws_launch_template" "web_template" {
   key_name      = "vockey"
   
   iam_instance_profile { name = "LabInstanceProfile" }
+
+  # NUEVO: Configuración estricta de disco según rúbrica (50 GB gp3 SSD cifrado)
+  block_device_mappings {
+    device_name = "/dev/sda1"
+    ebs {
+      volume_size = 50
+      volume_type = "gp3"
+      encrypted   = true
+    }
+  }
 
   network_interfaces {
     security_groups             = [aws_security_group.ec2_sg.id]
@@ -330,14 +347,15 @@ resource "aws_launch_template" "web_template" {
 resource "aws_autoscaling_group" "web_asg" {
   vpc_zone_identifier = [aws_subnet.public_1a.id, aws_subnet.public_1b.id]
   
-  # NUEVO: Capacidades actualizadas según la rúbrica
   desired_capacity    = 2
   max_size            = 3
   min_size            = 2
   
+  # NUEVO: Target Group de HTTPS agregado a la lista
   target_group_arns   = [
     aws_lb_target_group.web_tg.arn, 
-    aws_lb_target_group.backend_tg.arn
+    aws_lb_target_group.backend_tg.arn,
+    aws_lb_target_group.web_tg_https.arn
   ]
 
   launch_template {
@@ -345,14 +363,12 @@ resource "aws_autoscaling_group" "web_asg" {
     version = "$Latest"
   }
 
-  # ETIQUETA DE BACKUP: Vital para que la Capa 7 funcione automáticamente
   tag {
     key                 = "Backup"
     value               = "true"
     propagate_at_launch = true
   }
 
-  # ETIQUETA DE NOMBRE: Para identificar las instancias en la consola de EC2
   tag {
     key                 = "Name"
     value               = "TechNova-Web-Server"
@@ -371,6 +387,7 @@ resource "aws_db_subnet_group" "rds_subnets" {
 resource "aws_db_instance" "mysql_db" {
   identifier             = "technova-db-primary"
   allocated_storage      = 50
+  storage_type           = "gp3" # NUEVO: Tipo de almacenamiento gp3
   engine                 = "mysql"
   engine_version         = "8.4"
   instance_class         = var.db_instance_class
@@ -416,7 +433,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_alta" {
   namespace           = "AWS/EC2"
   period              = "120"
   statistic           = "Average"
-  threshold           = "75" # NUEVO: Umbral ajustado al 75%
+  threshold           = "75"
   alarm_description   = "Se activará si el promedio de CPU del ASG supera el 75%."
   alarm_actions       = [aws_sns_topic.alertas_technova.arn]
   
@@ -425,7 +442,6 @@ resource "aws_cloudwatch_metric_alarm" "cpu_alta" {
   }
 }
 
-# NUEVO: Alarma de Memoria RAM requerida por la rúbrica
 resource "aws_cloudwatch_metric_alarm" "ram_alta" {
   alarm_name          = "TechNova-RAM-Alta"
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -434,7 +450,7 @@ resource "aws_cloudwatch_metric_alarm" "ram_alta" {
   namespace           = "CWAgent"
   period              = "120"
   statistic           = "Average"
-  threshold           = "75" # NUEVO: Umbral de RAM ajustado al 75%
+  threshold           = "75"
   alarm_description   = "Se activará si el promedio de RAM supera el 75%."
   alarm_actions       = [aws_sns_topic.alertas_technova.arn]
 }
@@ -481,7 +497,6 @@ resource "aws_cloudwatch_dashboard" "dashboard_ec2_nuevo" {
           title   = "Disco por Instancia (%)"
         }
       },
-      # NUEVO: Gráfico de Red requerido por la rúbrica
       {
         type   = "metric",
         x      = 0, y = 6, width = 24, height = 6,
@@ -559,7 +574,6 @@ resource "aws_backup_plan" "technova_plan" {
     rule_name         = "RespaldoDiario7Dias"
     target_vault_name = aws_backup_vault.technova_vault.name
     
-    # CRON CORREGIDO: 04:30 AM UTC equivale exactamente a las 00:30 AM en Chile actual.
     schedule          = "cron(35 21 * * ? *)"
 
     lifecycle {
