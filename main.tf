@@ -198,7 +198,6 @@ resource "aws_lb_target_group" "backend_tg" {
   }
 }
 
-# NUEVO: Target Group para HTTPS (Requisito de rúbrica)
 resource "aws_lb_target_group" "web_tg_https" {
   name     = "technova-tg-https"
   port     = 443
@@ -234,7 +233,6 @@ resource "aws_launch_template" "web_template" {
   
   iam_instance_profile { name = "LabInstanceProfile" }
 
-  # NUEVO: Configuración estricta de disco según rúbrica (50 GB gp3 SSD cifrado)
   block_device_mappings {
     device_name = "/dev/sda1"
     ebs {
@@ -317,6 +315,7 @@ resource "aws_launch_template" "web_template" {
                 },
                 "metrics": {
                   "append_dimensions": {
+                    "AutoScalingGroupName": "$${aws:AutoScalingGroupName}",
                     "InstanceId": "$${aws:InstanceId}"
                   },
                   "metrics_collected": {
@@ -351,7 +350,6 @@ resource "aws_autoscaling_group" "web_asg" {
   max_size            = 3
   min_size            = 2
   
-  # NUEVO: Target Group de HTTPS agregado a la lista
   target_group_arns   = [
     aws_lb_target_group.web_tg.arn, 
     aws_lb_target_group.backend_tg.arn,
@@ -387,7 +385,7 @@ resource "aws_db_subnet_group" "rds_subnets" {
 resource "aws_db_instance" "mysql_db" {
   identifier             = "technova-db-primary"
   allocated_storage      = 50
-  storage_type           = "gp3" # NUEVO: Tipo de almacenamiento gp3
+  storage_type           = "gp3" 
   engine                 = "mysql"
   engine_version         = "8.4"
   instance_class         = var.db_instance_class
@@ -453,6 +451,10 @@ resource "aws_cloudwatch_metric_alarm" "ram_alta" {
   threshold           = "75"
   alarm_description   = "Se activará si el promedio de RAM supera el 75%."
   alarm_actions       = [aws_sns_topic.alertas_technova.arn]
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.web_asg.name
+  }
 }
 
 resource "aws_cloudwatch_dashboard" "dashboard_ec2_nuevo" {
