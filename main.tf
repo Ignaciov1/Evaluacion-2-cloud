@@ -318,6 +318,7 @@ resource "aws_launch_template" "web_template" {
                     "AutoScalingGroupName": "$${aws:AutoScalingGroupName}",
                     "InstanceId": "$${aws:InstanceId}"
                   },
+                  "aggregation_dimensions": [["AutoScalingGroupName"]],
                   "metrics_collected": {
                     "cpu": {
                       "measurement": ["cpu_usage_active"],
