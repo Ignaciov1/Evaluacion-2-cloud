@@ -23,12 +23,20 @@ data "aws_caller_identity" "current" {}
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
-  tags                 = { Name = "VPC-TechNova-HA" }
+  tags = { 
+    Name        = "VPC-TechNova-HA"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
-  tags   = { Name = "IGW-TechNova" }
+  tags = { 
+    Name        = "IGW-TechNova"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 # Subredes Públicas (Capa Web)
@@ -37,7 +45,11 @@ resource "aws_subnet" "public_1a" {
   cidr_block              = "10.0.0.0/24"
   availability_zone       = "${var.region}a"
   map_public_ip_on_launch = true
-  tags                    = { Name = "Subred-Publica-1A" }
+  tags = { 
+    Name        = "Subred-Publica-1A"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_subnet" "public_1b" {
@@ -45,7 +57,11 @@ resource "aws_subnet" "public_1b" {
   cidr_block              = "10.0.1.0/24"
   availability_zone       = "${var.region}b"
   map_public_ip_on_launch = true
-  tags                    = { Name = "Subred-Publica-1B" }
+  tags = { 
+    Name        = "Subred-Publica-1B"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 # Subredes Privadas (Capa de Datos)
@@ -53,14 +69,22 @@ resource "aws_subnet" "private_1a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
   availability_zone = "${var.region}a"
-  tags              = { Name = "Subred-Privada-RDS-1A" }
+  tags = { 
+    Name        = "Subred-Privada-RDS-1A"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_subnet" "private_1b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.3.0/24"
   availability_zone = "${var.region}b"
-  tags              = { Name = "Subred-Privada-RDS-1B" }
+  tags = { 
+    Name        = "Subred-Privada-RDS-1B"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 # Enrutamiento
@@ -69,6 +93,11 @@ resource "aws_route_table" "public_rt" {
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
+  }
+  tags = {
+    Name        = "Tabla-Rutas-Publica"
+    Environment = "Produccion"
+    Project     = "TechNova"
   }
 }
 
@@ -116,6 +145,12 @@ resource "aws_security_group" "alb_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name        = "sg_alb_technova"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_security_group" "ec2_sg" {
@@ -149,6 +184,12 @@ resource "aws_security_group" "ec2_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name        = "sg_ec2_technova"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_security_group" "rds_sg" {
@@ -161,6 +202,12 @@ resource "aws_security_group" "rds_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.ec2_sg.id]
   }
+
+  tags = {
+    Name        = "sg_rds_technova"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 # ==============================================================================
@@ -172,6 +219,12 @@ resource "aws_lb" "web_alb" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
   subnets            = [aws_subnet.public_1a.id, aws_subnet.public_1b.id]
+
+  tags = {
+    Name        = "technova-alb"
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_lb_target_group" "web_tg" {
@@ -179,6 +232,11 @@ resource "aws_lb_target_group" "web_tg" {
   port     = 80
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
+
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_lb_target_group" "backend_tg" {
@@ -196,6 +254,11 @@ resource "aws_lb_target_group" "backend_tg" {
     healthy_threshold   = 2
     unhealthy_threshold = 2
   }
+
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_lb_target_group" "web_tg_https" {
@@ -203,6 +266,11 @@ resource "aws_lb_target_group" "web_tg_https" {
   port     = 443
   protocol = "HTTPS"
   vpc_id   = aws_vpc.main.id
+
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_lb_listener" "web_listener" {
@@ -245,6 +313,12 @@ resource "aws_launch_template" "web_template" {
   network_interfaces {
     security_groups             = [aws_security_group.ec2_sg.id]
     associate_public_ip_address = true
+  }
+
+  tags = {
+    Name        = "technova-tpl"
+    Environment = "Produccion"
+    Project     = "TechNova"
   }
 
   user_data = base64encode(<<-EOF
@@ -372,6 +446,18 @@ resource "aws_autoscaling_group" "web_asg" {
     value               = "TechNova-Web-Server"
     propagate_at_launch = true
   }
+
+  tag {
+    key                 = "Environment"
+    value               = "Produccion"
+    propagate_at_launch = true
+  }
+
+  tag {
+    key                 = "Project"
+    value               = "TechNova"
+    propagate_at_launch = true
+  }
 }
 
 # ==============================================================================
@@ -380,6 +466,11 @@ resource "aws_autoscaling_group" "web_asg" {
 resource "aws_db_subnet_group" "rds_subnets" {
   name       = "rds-subnet-group"
   subnet_ids = [aws_subnet.private_1a.id, aws_subnet.private_1b.id]
+
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_db_instance" "mysql_db" {
@@ -397,6 +488,13 @@ resource "aws_db_instance" "mysql_db" {
   skip_final_snapshot    = true
   storage_encrypted      = true
   multi_az               = true
+
+  tags = {
+    Name        = "technova-db-primary"
+    Environment = "Produccion"
+    Project     = "TechNova"
+    Backup      = "true"
+  }
 }
 
 # ==============================================================================
@@ -404,10 +502,18 @@ resource "aws_db_instance" "mysql_db" {
 # ==============================================================================
 resource "aws_ecr_repository" "frontend" { 
   name = "tienda-tech-frontend" 
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_ecr_repository" "backend" { 
   name = "tienda-tech-backend" 
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 # ==============================================================================
@@ -415,6 +521,10 @@ resource "aws_ecr_repository" "backend" {
 # ==============================================================================
 resource "aws_sns_topic" "alertas_technova" {
   name = "technova-alertas-topic"
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_sns_topic_subscription" "alerta_email" {
@@ -438,6 +548,11 @@ resource "aws_cloudwatch_metric_alarm" "cpu_alta" {
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.web_asg.name
   }
+
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_cloudwatch_metric_alarm" "ram_alta" {
@@ -454,6 +569,11 @@ resource "aws_cloudwatch_metric_alarm" "ram_alta" {
 
   dimensions = {
     AutoScalingGroupName = aws_autoscaling_group.web_asg.name
+  }
+
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
   }
 }
 
@@ -567,6 +687,10 @@ resource "aws_cloudwatch_dashboard" "dashboard_rds" {
 # ==============================================================================
 resource "aws_backup_vault" "technova_vault" {
   name        = "BovedaTechNova-IaC"
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
 }
 
 resource "aws_backup_plan" "technova_plan" {
@@ -581,6 +705,11 @@ resource "aws_backup_plan" "technova_plan" {
     lifecycle {
       delete_after = 7
     }
+  }
+
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
   }
 }
 
@@ -598,5 +727,101 @@ resource "aws_backup_selection" "technova_selection" {
     type  = "STRINGEQUALS"
     key   = "Backup"
     value = "true"
+  }
+}
+
+# ==============================================================================
+# CAPA 8: GOBIERNO CLOUD Y FINOPS (EVALUACIÓN 3)
+# ==============================================================================
+
+# 1. Presupuesto y Alertas (AWS Budgets)
+resource "aws_budgets_budget" "technova_presupuesto" {
+  name              = "Presupuesto-TechNova-Mensual"
+  budget_type       = "COST"
+  limit_amount      = "200" 
+  limit_unit        = "USD"
+  time_unit         = "MONTHLY"
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 60
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = ["ig.sariego@duocuc.cl"]
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 70
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = ["ig.sariego@duocuc.cl"]
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 80
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "FORECASTED"
+    subscriber_email_addresses = ["ig.sariego@duocuc.cl"]
+  }
+}
+
+# 2. Trazabilidad y Auditoría (AWS CloudTrail)
+resource "random_string" "sufijo" {
+  length  = 6
+  special = false
+  upper   = false
+}
+
+resource "aws_s3_bucket" "cloudtrail_bucket" {
+  bucket        = "technova-cloudtrail-logs-${random_string.sufijo.result}"
+  force_destroy = true
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
+  }
+}
+
+resource "aws_s3_bucket_policy" "cloudtrail_policy" {
+  bucket = aws_s3_bucket.cloudtrail_bucket.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AWSCloudTrailAclCheck"
+        Effect = "Allow"
+        Principal = { Service = "cloudtrail.amazonaws.com" }
+        Action    = "s3:GetBucketAcl"
+        Resource  = aws_s3_bucket.cloudtrail_bucket.arn
+      },
+      {
+        Sid    = "AWSCloudTrailWrite"
+        Effect = "Allow"
+        Principal = { Service = "cloudtrail.amazonaws.com" }
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.cloudtrail_bucket.arn}/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_cloudtrail" "technova_trail" {
+  name                          = "TechNova-Auditoria-Trail"
+  s3_bucket_name                = aws_s3_bucket.cloudtrail_bucket.id
+  include_global_service_events = true
+  is_multi_region_trail         = true
+  enable_log_file_validation    = true
+
+  depends_on = [aws_s3_bucket_policy.cloudtrail_policy]
+
+  tags = {
+    Environment = "Produccion"
+    Project     = "TechNova"
   }
 }
