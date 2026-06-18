@@ -392,6 +392,7 @@ resource "aws_launch_template" "web_template" {
                     "AutoScalingGroupName": "$${aws:AutoScalingGroupName}",
                     "InstanceId": "$${aws:InstanceId}"
                   },
+                  "aggregation_dimensions": [["AutoScalingGroupName"]],
                   "metrics_collected": {
                     "cpu": {
                       "measurement": ["cpu_usage_active"],
@@ -418,6 +419,7 @@ resource "aws_launch_template" "web_template" {
 }
 
 resource "aws_autoscaling_group" "web_asg" {
+  name                = "TechNova-ASG"
   vpc_zone_identifier = [aws_subnet.public_1a.id, aws_subnet.public_1b.id]
   
   desired_capacity    = 2
