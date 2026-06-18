@@ -737,6 +737,7 @@ resource "aws_backup_selection" "technova_selection" {
 # ==============================================================================
 
 # 1. Presupuesto y Alertas (AWS Budgets)
+/*
 resource "aws_budgets_budget" "technova_presupuesto" {
   name              = "Presupuesto-TechNova-Mensual"
   budget_type       = "COST"
@@ -768,6 +769,7 @@ resource "aws_budgets_budget" "technova_presupuesto" {
     subscriber_email_addresses = ["ig.sariego@duocuc.cl"]
   }
 }
+*/
 
 # 2. Trazabilidad y Auditoría (AWS CloudTrail)
 resource "random_string" "sufijo" {
